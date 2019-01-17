@@ -11,38 +11,39 @@
 ## Read and Wrangle
 
 #' Weather dataset consists of trial by trial data from all animals across all days
-
+#'
 #' Day: Integer - day of the experiment including all pre-training
-
+#'
 #' Batch: 1-4 - session within a day in which animal was ran
-
+#'
 #' Subject: Integer - Identifier for each animal
-
+#'
 #' Session: Factor - "WTL" is probabilistic learning, "WTR" is reversal learning
-
+#'
 #' Time: Integer - Time of response since begining of trial in deciseconds
-
+#'
 #' Response: Binary -  -1 is a response on low rewarding lever, +1 is a response on high rewarding lever, -1 is a response on the low rewarding lever
-
+#'
 #' Reward: Binary - 1 is a rewarding trial, 0 is a non-rewarding trial
-
+#'
 #' Trial: Integer - Trial number within a session indexed from 1 up to 100
-
+#'
 #' ContinuousTrial: Integer - Trial number within and across sessions - represents all choices as a continuous stream
-
+#'
 #' SessionContinuous Trial:  Integer - As above, but resets for reversal learning
-
+#'
 #' SessionDay: Integer - Day number within a session type
-
+#'
 #' WeatherDay: Integer - Day number in PL/RL continuously
-
+#'
 #' Drug: Factor - Drug type animal was dosed with in RL
-
+#'
 #' CumulativeSessionReward: Integer - Counts up total rewards ona given day
-
+#'
 #' CumulativeSessionResponse: Integer - Count of lever presses: indexes up by 1 with every high rewarding press, indexes down by one with every low rewarding press
-
+#'
 #' CumulativeTotalReward: Integer - As CumulativeSessionReward, but counts over days
+
 
 ## OP005_WTL = probabilistic learning, OP005_WTR = reversal learning with drug
 ##subject ID's given different drugs in WTR
@@ -63,7 +64,7 @@ TPGS <- c(2, 5, 6, 19, 20, 22, 24, 26, 28, 33, 38, 46)
 
 weather <- read_xlsx("phase 5 data.xlsx", col_names = TRUE)
 weather <- weather %>%
-  filter(Subject != 8 & Subject != 40 & Subject != 48 & Subject != 29) %>%
+  filter(Subject != 8 & Subject != 40 & Subject != 48 & Subject != 29) %>% ## these animals are exluded for various reasons
   filter(is.na(Session) == FALSE) %>%
   group_by(Subject, Session) %>%
   mutate(SessionDay = Day - min(Day)+1) %>% ## days in a given session - either WTL or WTR
@@ -196,14 +197,14 @@ summary(completionmodel4)
 
 anova(completionmodel1, completionmodel2, completionmodel3, completionmodel4)
 
-#' Looking at days to criterion, there's no significant difference between groups. The next thing to do is start looking at trial-by-trial data
+#' Looking at days to criterion, there's no significant difference between groups. The next thing to do is start looking at day-by-day data
 
 
 ratioPresses <- weather %>%
   group_by(Subject, SessionDay, Drug, Session, WeatherDay) %>%
   summarise(Total = max(Trial), PercentHigh = sum(Response == 1)/max(Trial)*100)
 
-ratioPresses <- ratioPresses[-c(285, 309),]
+ratioPresses <- ratioPresses[-c(285, 309),] ## duplicate data, needed removing. Not sure how it got there?
 
 
 ratioPressesPlot <- ggplot(ratioPresses, aes(x = WeatherDay, y = PercentHigh, colour = Session, shape = Drug)) +
@@ -211,5 +212,23 @@ ratioPressesPlot <- ggplot(ratioPresses, aes(x = WeatherDay, y = PercentHigh, co
   geom_hline(yintercept = 50)+
   facet_wrap(~Subject)
 ratioPressesPlot
+
+
+justWTRRatios <- ratioPresses %>%
+  filter(Session == "WTR") %>%
+  group_by(Subject) %>%
+  mutate(WTL = min(WeatherDay)-1) # adding the length of time an animal spent in WTL as a predictor possibly?
+
+
+#' Heirachy of data:
+#'
+#' Bottom-level: percentage of correct lever presses made by an animal on a given day - spans over many days until completion
+#' Total presses made by a particular animal on a particular day - may be a proxy for effort
+#' could also expand this to include WTL training days
+#'
+#' Mid-level: Individual animal IDs
+#' matched with animal IDs is the number of days it took them to reach criterion in the WTL learning phase - this may be a proxy for intellegence
+#'
+#' Top-level: Drug group to which animal is assigned - this is the effct we want to look at
 
 
