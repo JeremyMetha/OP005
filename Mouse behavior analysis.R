@@ -230,5 +230,3 @@ justWTRRatios <- ratioPresses %>%
 #' matched with animal IDs is the number of days it took them to reach criterion in the WTL learning phase - this may be a proxy for intellegence
 #'
 #' Top-level: Drug group to which animal is assigned - this is the effct we want to look at
-
-
