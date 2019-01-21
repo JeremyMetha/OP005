@@ -9,7 +9,39 @@ These experiments aimed to investigate the effects of modulating sleep architect
 ## Read and Wrangle
 ```
 
-Weather dataset consists of trial by trial data from all animals across all days Day: Integer - day of the experiment including all pre-training Batch: 1-4 - session within a day in which animal was ran Subject: Integer - Identifier for each animal Session: Factor - "WTL" is probabilistic learning, "WTR" is reversal learning Time: Integer - Time of response since begining of trial in deciseconds Response: Binary - -1 is a response on low rewarding lever, +1 is a response on high rewarding lever, -1 is a response on the low rewarding lever Reward: Binary - 1 is a rewarding trial, 0 is a non-rewarding trial Trial: Integer - Trial number within a session indexed from 1 up to 100 ContinuousTrial: Integer - Trial number within and across sessions - represents all choices as a continuous stream SessionContinuous Trial: Integer - As above, but resets for reversal learning SessionDay: Integer - Day number within a session type WeatherDay: Integer - Day number in PL/RL continuously Drug: Factor - Drug type animal was dosed with in RL CumulativeSessionReward: Integer - Counts up total rewards ona given day CumulativeSessionResponse: Integer - Count of lever presses: indexes up by 1 with every high rewarding press, indexes down by one with every low rewarding press CumulativeTotalReward: Integer - As CumulativeSessionReward, but counts over days
+Weather dataset consists of trial by trial data from all animals across all days
+
+Day: Integer - day of the experiment including all pre-training
+
+Batch: 1-4 - session within a day in which animal was ran
+
+Subject: Integer - Identifier for each animal
+
+Session: Factor - "WTL" is probabilistic learning, "WTR" is reversal learning
+
+Time: Integer - Time of response since begining of trial in deciseconds
+
+Response: Binary - -1 is a response on low rewarding lever, +1 is a response on high rewarding lever, -1 is a response on the low rewarding lever
+
+Reward: Binary - 1 is a rewarding trial, 0 is a non-rewarding trial
+
+Trial: Integer - Trial number within a session indexed from 1 up to 100
+
+ContinuousTrial: Integer - Trial number within and across sessions - represents all choices as a continuous stream
+
+SessionContinuous Trial: Integer - As above, but resets for reversal learning
+
+SessionDay: Integer - Day number within a session type
+
+WeatherDay: Integer - Day number in PL/RL continuously
+
+Drug: Factor - Drug type animal was dosed with in RL
+
+CumulativeSessionReward: Integer - Counts up total rewards ona given day
+
+CumulativeSessionResponse: Integer - Count of lever presses: indexes up by 1 with every high rewarding press, indexes down by one with every low rewarding press
+
+CumulativeTotalReward: Integer - As CumulativeSessionReward, but counts over days
 
 ``` r
 ## OP005_WTL = probabilistic learning, OP005_WTR = reversal learning with drug
