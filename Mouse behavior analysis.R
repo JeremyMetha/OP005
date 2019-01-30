@@ -217,8 +217,10 @@ ratioPressesPlot
 justWTRRatios <- ratioPresses %>%
   filter(Session == "WTR") %>%
   group_by(Subject) %>%
-  mutate(WTL = min(WeatherDay)-1) # adding the length of time an animal spent in WTL as a predictor possibly?
-
+  mutate(WTL = min(WeatherDay)-1) %>% # adding the length of time an animal spent in WTL as a predictor possibly?
+  ungroup() %>%
+  mutate(Subject = as.factor(Subject), Drug = as.factor(Drug)) %>%
+  mutate(Drug = relevel(Drug, ref = "TPGS"))
 
 #' Heirachy of data:
 #'
@@ -229,4 +231,40 @@ justWTRRatios <- ratioPresses %>%
 #' Mid-level: Individual animal IDs
 #' matched with animal IDs is the number of days it took them to reach criterion in the WTL learning phase - this may be a proxy for intellegence
 #'
-#' Top-level: Drug group to which animal is assigned - this is the effct we want to look at
+#' Top-level: Drug group to which animal is assigned - this is the effect we want to look at
+
+WTRsummaries <- weather %>%
+  group_by(Subject, Drug, Session) %>%
+  summarise(length = max(SessionDay))
+WTRsummaries <- WTRsummaries %>%
+  spread(Session, length)
+
+
+bywtlplot <- ggplot(WTRsummaries, aes(x = WTL, y = WTR, colour = Drug)) +
+  geom_point() +
+  geom_smooth(method = 'lm')
+bywtlplot
+
+bydayplot <- ggplot(justWTRRatios, aes(x = SessionDay, y = PercentHigh, colour = Drug)) +
+  geom_point() +
+  geom_smooth(method = 'loess') +
+  facet_wrap(~Drug)
+bydayplot
+
+
+# first, fit a baseline model
+
+intercept <- gls(PercentHigh ~ 1, data = justWTRRatios, method = "ML", na.action = na.exclude)
+summary(intercept)
+
+randomintercept <- lme(PercentHigh ~ 1, data = justWTRRatios, random =  ~1|Subject, method = "ML", na.action = na.exclude, control = list(opt="optim"))
+summary(randomintercept)
+
+timeRI <- update(randomintercept, .~. + SessionDay)
+summary(timeRI)
+
+timeRS <- update(timeRI, .~., random = ~SessionDay|Subject)
+summary(timeRS)
+
+drugRS <- update(timeRS, .~. + Drug)
+summary(drugRS)
