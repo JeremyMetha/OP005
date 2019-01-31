@@ -276,9 +276,25 @@ AR <- lme(PercentHigh ~ SessionDay*Drug, random = ~SessionDay|Subject, data = ju
 summary(AR)
 
 
-#' including WTL perforamance?
+#' including WTL performance?
 
 ARwtl <- lme(PercentHigh ~ SessionDay*Drug + WTL, random = ~SessionDay|Subject, data = justWTRRatios, method = "ML", na.action = na.exclude, correlation = corAR1(), control = lmeControl(opt = 'optim'))
 summary(ARwtl)
 
 anova(unconditional, growth, condgrowth, AR, ARwtl)
+
+#' GLLMadaptive package to go forward to trial by trial? And/or GLLAMM in STATA - recommended by Amy from Florey
+#'
+#' Structure: Drug groups (3) -> Animals (13x DORAs, 13x Zolpidem, 12x TPGS) -> Days (<=24) -> Trials (<=100)
+#'
+#' Drug group level: Drugs
+#'
+#' Animal level: Animal ID, WTL performance
+#'
+#' Day level: day in trial, total presses, % correct, win-stay/lose-shift etc counts
+#'
+#' trial level: trial number, decision (high/low), reward(y/n - looking at lags too maybe?), time to respond
+#'
+#' Question: Does REM sleep amount (by drugs at this stage, could add REM & total sleep time at day level once analysed?) change animal performance (days to learn, rewards earned, likelihood of high lever choice, high lever choices made).
+#'
+#' Hypothesis: increased REM will increase between day- learning rate, resulting in more correct presses and less time to criterion in DORA, then TPGS, then Zolpidem mice.
