@@ -252,19 +252,33 @@ bydayplot <- ggplot(justWTRRatios, aes(x = SessionDay, y = PercentHigh, colour =
 bydayplot
 
 
-# first, fit a baseline model
+#' first, fit a baseline model (unconditional model)
 
-intercept <- gls(PercentHigh ~ 1, data = justWTRRatios, method = "ML", na.action = na.exclude)
-summary(intercept)
 
-randomintercept <- lme(PercentHigh ~ 1, data = justWTRRatios, random =  ~1|Subject, method = "ML", na.action = na.exclude, control = list(opt="optim"))
-summary(randomintercept)
+unconditional <- lme(PercentHigh ~ 1, random = ~1|Subject, data = justWTRRatios, method = "ML", na.action = na.exclude)
+summary(unconditional)
 
-timeRI <- update(randomintercept, .~. + SessionDay)
-summary(timeRI)
+#' unconditional growth model - adding day
 
-timeRS <- update(timeRI, .~., random = ~SessionDay|Subject)
-summary(timeRS)
+growth <- lme(PercentHigh ~ SessionDay, random = ~SessionDay|Subject, data = justWTRRatios, method = "ML", na.action = na.exclude)
+summary(growth)
 
-drugRS <- update(timeRS, .~. + Drug)
-summary(drugRS)
+
+#' conditional growth - adding drug
+
+condgrowth <- lme(PercentHigh ~ SessionDay*Drug, random = ~SessionDay|Subject, data = justWTRRatios, method = "ML", na.action = na.exclude)
+summary(condgrowth)
+
+
+#' AR model
+
+AR <- lme(PercentHigh ~ SessionDay*Drug, random = ~SessionDay|Subject, data = justWTRRatios, method = "ML", na.action = na.exclude, correlation = corAR1(), control = lmeControl(opt = 'optim'))
+summary(AR)
+
+
+#' including WTL perforamance?
+
+ARwtl <- lme(PercentHigh ~ SessionDay*Drug + WTL, random = ~SessionDay|Subject, data = justWTRRatios, method = "ML", na.action = na.exclude, correlation = corAR1(), control = lmeControl(opt = 'optim'))
+summary(ARwtl)
+
+anova(unconditional, growth, condgrowth, AR, ARwtl)

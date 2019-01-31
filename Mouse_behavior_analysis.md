@@ -623,7 +623,10 @@ ratioPressesPlot
 justWTRRatios <- ratioPresses %>%
   filter(Session == "WTR") %>%
   group_by(Subject) %>%
-  mutate(WTL = min(WeatherDay)-1) # adding the length of time an animal spent in WTL as a predictor possibly?
+  mutate(WTL = min(WeatherDay)-1) %>% # adding the length of time an animal spent in WTL as a predictor possibly?
+  ungroup() %>%
+  mutate(Subject = as.factor(Subject), Drug = as.factor(Drug)) %>%
+  mutate(Drug = relevel(Drug, ref = "TPGS"))
 ```
 
 Heirachy of data:
@@ -632,4 +635,251 @@ Bottom-level: percentage of correct lever presses made by an animal on a given d
 
 Mid-level: Individual animal IDs matched with animal IDs is the number of days it took them to reach criterion in the WTL learning phase - this may be a proxy for intellegence
 
-Top-level: Drug group to which animal is assigned - this is the effct we want to look at
+Top-level: Drug group to which animal is assigned - this is the effect we want to look at
+
+``` r
+WTRsummaries <- weather %>%
+  group_by(Subject, Drug, Session) %>%
+  summarise(length = max(SessionDay))
+WTRsummaries <- WTRsummaries %>%
+  spread(Session, length)
+
+
+bywtlplot <- ggplot(WTRsummaries, aes(x = WTL, y = WTR, colour = Drug)) +
+  geom_point() +
+  geom_smooth(method = 'lm')
+bywtlplot
+```
+
+![](Mouse_behavior_analysis_files/figure-markdown_github/unnamed-chunk-5-1.png)
+
+``` r
+bydayplot <- ggplot(justWTRRatios, aes(x = SessionDay, y = PercentHigh, colour = Drug)) +
+  geom_point() +
+  geom_smooth(method = 'loess') +
+  facet_wrap(~Drug)
+bydayplot
+```
+
+![](Mouse_behavior_analysis_files/figure-markdown_github/unnamed-chunk-5-2.png)
+
+first, fit a baseline model (unconditional model)
+
+``` r
+unconditional <- lme(PercentHigh ~ 1, random = ~1|Subject, data = justWTRRatios, method = "ML", na.action = na.exclude)
+summary(unconditional)
+```
+
+    ## Linear mixed-effects model fit by maximum likelihood
+    ##  Data: justWTRRatios 
+    ##        AIC      BIC    logLik
+    ##   3889.183 3901.374 -1941.591
+    ## 
+    ## Random effects:
+    ##  Formula: ~1 | Subject
+    ##         (Intercept) Residual
+    ## StdDev:    2.928559 21.94228
+    ## 
+    ## Fixed effects: PercentHigh ~ 1 
+    ##                Value Std.Error  DF  t-value p-value
+    ## (Intercept) 59.13442  1.179581 392 50.13174       0
+    ## 
+    ## Standardized Within-Group Residuals:
+    ##        Min         Q1        Med         Q3        Max 
+    ## -2.5366202 -0.7783043  0.1289603  0.8131755  1.8966674 
+    ## 
+    ## Number of Observations: 430
+    ## Number of Groups: 38
+
+unconditional growth model - adding day
+
+``` r
+growth <- lme(PercentHigh ~ SessionDay, random = ~SessionDay|Subject, data = justWTRRatios, method = "ML", na.action = na.exclude)
+summary(growth)
+```
+
+    ## Linear mixed-effects model fit by maximum likelihood
+    ##  Data: justWTRRatios 
+    ##        AIC     BIC    logLik
+    ##   3610.967 3635.35 -1799.484
+    ## 
+    ## Random effects:
+    ##  Formula: ~SessionDay | Subject
+    ##  Structure: General positive-definite, Log-Cholesky parametrization
+    ##             StdDev    Corr  
+    ## (Intercept) 13.487726 (Intr)
+    ## SessionDay   3.366779 -0.411
+    ## Residual    13.039373       
+    ## 
+    ## Fixed effects: PercentHigh ~ SessionDay 
+    ##                 Value Std.Error  DF   t-value p-value
+    ## (Intercept) 29.384917 2.6260551 391 11.189757       0
+    ## SessionDay   6.091648 0.6203661 391  9.819441       0
+    ##  Correlation: 
+    ##            (Intr)
+    ## SessionDay -0.517
+    ## 
+    ## Standardized Within-Group Residuals:
+    ##         Min          Q1         Med          Q3         Max 
+    ## -4.34442565 -0.59578493  0.00248211  0.61571091  2.53116216 
+    ## 
+    ## Number of Observations: 430
+    ## Number of Groups: 38
+
+conditional growth - adding drug
+
+``` r
+condgrowth <- lme(PercentHigh ~ SessionDay*Drug, random = ~SessionDay|Subject, data = justWTRRatios, method = "ML", na.action = na.exclude)
+summary(condgrowth)
+```
+
+    ## Linear mixed-effects model fit by maximum likelihood
+    ##  Data: justWTRRatios 
+    ##        AIC      BIC    logLik
+    ##   3613.903 3654.541 -1796.951
+    ## 
+    ## Random effects:
+    ##  Formula: ~SessionDay | Subject
+    ##  Structure: General positive-definite, Log-Cholesky parametrization
+    ##             StdDev    Corr  
+    ## (Intercept) 12.451233 (Intr)
+    ## SessionDay   3.318844 -0.363
+    ## Residual    13.012266       
+    ## 
+    ## Fixed effects: PercentHigh ~ SessionDay * Drug 
+    ##                             Value Std.Error  DF   t-value p-value
+    ## (Intercept)              36.33152  4.390020 389  8.275933  0.0000
+    ## SessionDay                4.77124  1.068603 389  4.464938  0.0000
+    ## DrugDORAs                -7.72378  6.161522  35 -1.253550  0.2183
+    ## DrugZolpidem            -12.82450  6.109313  35 -2.099172  0.0431
+    ## SessionDay:DrugDORAs      2.04415  1.517825 389  1.346764  0.1788
+    ## SessionDay:DrugZolpidem   1.93775  1.497770 389  1.293755  0.1965
+    ##  Correlation: 
+    ##                         (Intr) SssnDy DrDORA DrgZlp SD:DDO
+    ## SessionDay              -0.473                            
+    ## DrugDORAs               -0.712  0.337                     
+    ## DrugZolpidem            -0.719  0.340  0.512              
+    ## SessionDay:DrugDORAs     0.333 -0.704 -0.487 -0.239       
+    ## SessionDay:DrugZolpidem  0.337 -0.713 -0.240 -0.479  0.502
+    ## 
+    ## Standardized Within-Group Residuals:
+    ##        Min         Q1        Med         Q3        Max 
+    ## -4.3233506 -0.5830980  0.0179246  0.6081149  2.5652057 
+    ## 
+    ## Number of Observations: 430
+    ## Number of Groups: 38
+
+AR model
+
+``` r
+AR <- lme(PercentHigh ~ SessionDay*Drug, random = ~SessionDay|Subject, data = justWTRRatios, method = "ML", na.action = na.exclude, correlation = corAR1(), control = lmeControl(opt = 'optim'))
+summary(AR)
+```
+
+    ## Linear mixed-effects model fit by maximum likelihood
+    ##  Data: justWTRRatios 
+    ##        AIC      BIC    logLik
+    ##   3553.141 3597.843 -1765.571
+    ## 
+    ## Random effects:
+    ##  Formula: ~SessionDay | Subject
+    ##  Structure: General positive-definite, Log-Cholesky parametrization
+    ##             StdDev     Corr  
+    ## (Intercept)  0.2377769 (Intr)
+    ## SessionDay   2.4264461 0.132 
+    ## Residual    15.8175915       
+    ## 
+    ## Correlation Structure: AR(1)
+    ##  Formula: ~1 | Subject 
+    ##  Parameter estimate(s):
+    ##       Phi 
+    ## 0.5313925 
+    ## Fixed effects: PercentHigh ~ SessionDay * Drug 
+    ##                            Value Std.Error  DF   t-value p-value
+    ## (Intercept)             33.48893  4.085900 389  8.196218  0.0000
+    ## SessionDay               4.85588  0.935226 389  5.192201  0.0000
+    ## DrugDORAs               -4.69568  5.733069  35 -0.819052  0.4183
+    ## DrugZolpidem            -6.38066  5.614526  35 -1.136456  0.2635
+    ## SessionDay:DrugDORAs     1.36807  1.337933 389  1.022522  0.3072
+    ## SessionDay:DrugZolpidem  0.51238  1.306873 389  0.392068  0.6952
+    ##  Correlation: 
+    ##                         (Intr) SssnDy DrDORA DrgZlp SD:DDO
+    ## SessionDay              -0.515                            
+    ## DrugDORAs               -0.713  0.367                     
+    ## DrugZolpidem            -0.728  0.375  0.519              
+    ## SessionDay:DrugDORAs     0.360 -0.699 -0.527 -0.262       
+    ## SessionDay:DrugZolpidem  0.369 -0.716 -0.263 -0.511  0.500
+    ## 
+    ## Standardized Within-Group Residuals:
+    ##         Min          Q1         Med          Q3         Max 
+    ## -3.88591583 -0.57656275  0.01143534  0.68350891  2.76563523 
+    ## 
+    ## Number of Observations: 430
+    ## Number of Groups: 38
+
+including WTL perforamance?
+
+``` r
+ARwtl <- lme(PercentHigh ~ SessionDay*Drug + WTL, random = ~SessionDay|Subject, data = justWTRRatios, method = "ML", na.action = na.exclude, correlation = corAR1(), control = lmeControl(opt = 'optim'))
+summary(ARwtl)
+```
+
+    ## Linear mixed-effects model fit by maximum likelihood
+    ##  Data: justWTRRatios 
+    ##        AIC     BIC    logLik
+    ##   3552.945 3601.71 -1764.473
+    ## 
+    ## Random effects:
+    ##  Formula: ~SessionDay | Subject
+    ##  Structure: General positive-definite, Log-Cholesky parametrization
+    ##             StdDev    Corr  
+    ## (Intercept)  2.497394 (Intr)
+    ## SessionDay   2.399451 0.096 
+    ## Residual    15.553110       
+    ## 
+    ## Correlation Structure: AR(1)
+    ##  Formula: ~1 | Subject 
+    ##  Parameter estimate(s):
+    ##       Phi 
+    ## 0.5155233 
+    ## Fixed effects: PercentHigh ~ SessionDay * Drug + WTL 
+    ##                            Value Std.Error  DF   t-value p-value
+    ## (Intercept)             37.83963  4.951751 389  7.641666  0.0000
+    ## SessionDay               4.84134  0.921659 389  5.252858  0.0000
+    ## DrugDORAs               -4.61744  5.681593  34 -0.812701  0.4220
+    ## DrugZolpidem            -8.30761  5.702779  34 -1.456765  0.1544
+    ## WTL                     -0.57481  0.393618  34 -1.460330  0.1534
+    ## SessionDay:DrugDORAs     1.40345  1.318694 389  1.064269  0.2879
+    ## SessionDay:DrugZolpidem  0.54921  1.288154 389  0.426358  0.6701
+    ##  Correlation: 
+    ##                         (Intr) SssnDy DrDORA DrgZlp WTL    SD:DDO
+    ## SessionDay              -0.403                                   
+    ## DrugDORAs               -0.567  0.352                            
+    ## DrugZolpidem            -0.707  0.350  0.500                     
+    ## WTL                     -0.576 -0.001 -0.026  0.220              
+    ## SessionDay:DrugDORAs     0.282 -0.699 -0.506 -0.245  0.000       
+    ## SessionDay:DrugZolpidem  0.296 -0.715 -0.251 -0.481 -0.012  0.500
+    ## 
+    ## Standardized Within-Group Residuals:
+    ##         Min          Q1         Med          Q3         Max 
+    ## -3.93266159 -0.57823000  0.01681378  0.68338722  2.56427561 
+    ## 
+    ## Number of Observations: 430
+    ## Number of Groups: 38
+
+``` r
+anova(unconditional, growth, condgrowth, AR, ARwtl)
+```
+
+    ##               Model df      AIC      BIC    logLik   Test   L.Ratio
+    ## unconditional     1  3 3889.183 3901.374 -1941.591                 
+    ## growth            2  6 3610.967 3635.350 -1799.484 1 vs 2 284.21558
+    ## condgrowth        3 10 3613.903 3654.541 -1796.951 2 vs 3   5.06426
+    ## AR                4 11 3553.141 3597.843 -1765.571 3 vs 4  62.76140
+    ## ARwtl             5 12 3552.945 3601.710 -1764.473 4 vs 5   2.19644
+    ##               p-value
+    ## unconditional        
+    ## growth         <.0001
+    ## condgrowth     0.2808
+    ## AR             <.0001
+    ## ARwtl          0.1383
